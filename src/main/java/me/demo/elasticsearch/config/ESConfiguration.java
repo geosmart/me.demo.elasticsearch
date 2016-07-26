@@ -38,7 +38,6 @@ public class ESConfiguration {
     @Value("${elasticsearch.port}")
     private String port;
 
-
     @Bean
     public Client esClient() {
         try {

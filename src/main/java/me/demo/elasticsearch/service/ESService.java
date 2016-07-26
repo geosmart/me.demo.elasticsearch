@@ -15,6 +15,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,14 +56,32 @@ public class ESService {
     @Qualifier("bulkProcessor")
     private BulkProcessor bulkProcessor;
 
-
     /**
      * 新建Index（database）
+     *
+     * @param index    索引
+     * @param settings 设置shard和replicas
      */
-    public void createIndex(String indexName, Settings.Builder settings) {
+    public void createIndex(String index, Settings.Builder settings) {
         IndicesAdminClient indicesAdminClient = esClient.admin().indices();
         settings = settings == null ? getDefaultIndexSettings() : settings;
         indicesAdminClient.prepareCreate(indexName).setSettings(settings).execute().actionGet();
+    }
+
+    /**
+     * 设置Mapping（database）
+     *
+     * @param index          索引
+     * @param type           类型
+     * @param mappingJsonStr 设置field analyzer
+     * @link curl -XPUT http://es1.es.com:9200/cloudx_web_v3/T_EVENT_LOG/_mapping?pretty -d
+     * '{"T_EVENT_LOG":{"properties":{"name":{"type":"string","analyzer":"ik","searchAnalyzer":"ik"}}}}'
+     * @link https://www.elastic.co/guide/en/elasticsearch/client/java-api/2.3/java-admin-indices.html#java-admin-indices-put-mapping
+     */
+    public void setIndexMapping(String index, String type, String mappingJsonStr) {
+        IndicesAdminClient indicesAdminClient = esClient.admin().indices();
+        //TODO org.elasticsearch.action.ActionRequestValidationException: Validation Failed: 1: mapping type is missing;
+        indicesAdminClient.preparePutMapping(index, type).setSource(mappingJsonStr).get();
     }
 
     /**
@@ -133,6 +154,7 @@ public class ESService {
         Map<String, Object> settings = new HashMap<>();
         settings.put("number_of_shards", "4");
         settings.put("number_of_replicas", "2");
+
         return Settings.builder().put(settings);
     }
 
@@ -145,6 +167,28 @@ public class ESService {
             Integer shards = settings.getAsInt("index.number_of_shards", null);
             Integer replicas = settings.getAsInt("index.number_of_replicas", null);
         }
+    }
+
+    public XContentBuilder getDefaultAnalyzerMapping(String index) {
+        XContentBuilder mapping = null;
+        try {
+            mapping = XContentFactory.jsonBuilder().startObject()
+                    .startObject(index)
+                    .startObject("properties")
+                    .startObject("name")
+                    .field("type", "string")
+                    .field("indexAnalyzer", "ik")
+                    .field("searchAnalyzer", "ik")
+                    .endObject()
+                    .endObject()
+                    .endObject()
+                    .endObject();
+            String json = mapping.prettyPrint().string();
+            log.debug("mapping:{}", json);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return mapping;
     }
 
 

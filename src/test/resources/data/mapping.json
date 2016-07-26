@@ -1,0 +1,1 @@
+{"T_EVENT_LOG":{"properties":{"name":{"type":"string","analyzer":"ik","search_analyzer":"ik"}}}}

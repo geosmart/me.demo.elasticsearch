@@ -9,7 +9,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -22,6 +24,8 @@ import javax.inject.Inject;
 import me.demo.elasticsearch.Application;
 import me.demo.elasticsearch.service.ESService;
 
+import static org.apache.commons.io.FileUtils.readFileToString;
+
 /**
  * Test class for ESService
  * Created by geomart on 2016/7/25.
@@ -31,7 +35,18 @@ import me.demo.elasticsearch.service.ESService;
 @SpringApplicationConfiguration(classes = Application.class)
 @RunWith(SpringJUnit4ClassRunner.class)
 @ActiveProfiles({"dev"})
-public class ESServiceTest {
+@Configuration
+public class ESServiceTest { 
+    @Value("${elasticsearch.indexName}")
+    private String indexName;
+
+    @Value("${elasticsearch.typeName}")
+    private String typeName;
+
+
+    @Value("${elasticsearch.port}")
+    private String  port;
+
     @Inject
     ESService esService;
 
@@ -40,14 +55,24 @@ public class ESServiceTest {
     @Before
     public void setup() {
         System.out.println("test begin...");
-        test_deleteIndex();
+//        test_deleteIndex();
+    }
+
+    @Test
+    public void test_getConfig() {
+        System.out.println(indexName);
+        System.out.println(port);
     }
 
     @Test
     public void test_createIndex() {
-        esService.createIndex("cloudx_web_v3", null);
+        esService.createIndex(indexName, null);
     }
 
+    @Test
+    public void test_setIndexMapping() {
+        esService.setIndexMapping(indexName,typeName,getMappingJson());
+    }
 
     /**
      * api插入10万条,7m18s
@@ -56,18 +81,18 @@ public class ESServiceTest {
     public void test_createDocument() {
         List<Object> array = JSON.parseArray(getEventLogJson());
         for (int i = 0; i < loop; i++) {
-            esService.createDocument("cloudx_web_v3", "T_EVENT_LOG", array);
+            esService.createDocument(indexName, typeName, array);
         }
     }
 
     /**
-     * bulkRequest插入10万条,1m12s
+     * bulkRequest插入10万条,1m10s
      */
     @Test
     public void test_createDocument_bulkRequest() {
         List<Object> array = JSON.parseArray(getEventLogJson());
         for (int i = 0; i < loop; i++) {
-            esService.createDocument_bulkRequest("cloudx_web_v3", "T_EVENT_LOG", array);
+            esService.createDocument_bulkRequest(indexName, typeName, array);
         }
     }
 
@@ -78,7 +103,7 @@ public class ESServiceTest {
     public void test_createDocument_bulkProcess() {
         List<Object> array = JSON.parseArray(getEventLogJson());
         for (int i = 0; i < loop; i++) {
-            esService.createDocument_bulkProcess("cloudx_web_v3", "T_EVENT_LOG", array);
+            esService.createDocument_bulkProcess(indexName, typeName, array);
         }
     }
 
@@ -87,12 +112,15 @@ public class ESServiceTest {
         esService.deleteDocument("tutorial", "TEST", "AVYgJ7n2_fDrwGO2UeRH");
         esService.deleteDocument("tutorial", "TEST", "AVYgKKzc_fDrwGO2UeRJ");
     }
+    @Test
+    public void test_deleteIndex() {
+        esService.deleteIndex(indexName); 
+    }
 
 
     @Test
-    public void test_deleteIndex() {
-        esService.deleteIndex("cloudx_web_v3");
-        esService.deleteIndex("tutorial");
+    public void getDefaultAnalyzerMapping() {
+        esService.getDefaultAnalyzerMapping(indexName);
     }
 
     /**
@@ -103,13 +131,27 @@ public class ESServiceTest {
         File file = new File(path);
         String data = null;
         try {
-            data = FileUtils.readFileToString(file, "UTF-8");
+            data = readFileToString(file, "UTF-8");
         } catch (IOException e) {
             e.printStackTrace();
         }
         return data;
     }
 
+    /**
+     * 测试数据
+     */
+    private String getMappingJson() {
+        String path = System.getProperty("user.dir") + "//src//test//resources//data//mapping.json";
+        File file = new File(path);
+        String data = null;
+        try {
+            data = readFileToString(file, "UTF-8");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
     @After
     public void Teardown() {
         System.out.println("test stop...");
