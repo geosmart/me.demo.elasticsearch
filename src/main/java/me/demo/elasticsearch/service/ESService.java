@@ -3,6 +3,7 @@ package me.demo.elasticsearch.service;
 import com.alibaba.fastjson.JSON;
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 
+import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.admin.indices.settings.get.GetSettingsResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -18,6 +19,13 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AbstractAggregationBuilder;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -25,11 +33,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
+
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 /**
  * Created by geosmart on 2016/7/25.
@@ -55,6 +66,38 @@ public class ESService {
     @Inject
     @Qualifier("bulkProcessor")
     private BulkProcessor bulkProcessor;
+
+    /**
+     * 查询需去重的Document的ID
+     *
+     * @param index 索引
+     */
+    public List<String> queryDuplicateDoc(String index, String type, String identifyField) {
+        List<String> docIds = new ArrayList<String>();
+        AbstractAggregationBuilder aggregation = AggregationBuilders.terms("duplicateCount").field(identifyField).minDocCount(2).subAggregation(AggregationBuilders.topHits("duplicateDocuments"));
+
+        SearchResponse sr = esClient.prepareSearch().setQuery(matchAllQuery()).setSize(0).addAggregation(aggregation).execute().actionGet();
+        if (sr.getAggregations() != null) {
+            Terms agg = sr.getAggregations().get("duplicateCount");
+            for (Terms.Bucket entry : agg.getBuckets()) {
+                // bucket key
+                String key = (String) entry.getKey();
+                long docCount = entry.getDocCount();
+                log.info("key [{}], doc_count [{}]", key, docCount);
+
+                //ask for top_hits for each bucket
+                SearchHit[] hits = ((TopHits) entry.getAggregations().get("duplicateDocuments")).getHits().getHits();
+                //reserve first doc,return duplicate docId
+                for (int i = 1; i < hits.length; i++) {
+                    SearchHit hit = hits[i];
+                    docIds.add(hit.getId());
+                    log.debug("hitId：{}, {}：{}", hit.getId(), identifyField, hit.sourceAsMap().get(identifyField));
+                }
+            }
+        }
+        return docIds;
+    }
+
 
     /**
      * 新建Index（database）
@@ -109,6 +152,14 @@ public class ESService {
         }
     }
 
+    /**
+     * 插入document（bulkProcess，批量插入-多线程/自动监听等特性）
+     */
+    public void createDocument_bulkProcess(String index, String type, String docJsonStr) {
+        if (StringUtils.isNoneEmpty(docJsonStr)) {
+            bulkProcessor.add(new IndexRequest(index, type).source(docJsonStr));
+        }
+    }
 
     /**
      * 插入document（bulkProcess，批量插入-多线程/自动监听等特性）
@@ -124,6 +175,7 @@ public class ESService {
      * 删除document
      */
     public void deleteDocument(String index, String type, String id) {
+        log.debug("delete doc ：{}", id);
         DeleteResponse rsp = new DeleteRequestBuilder(esClient, DeleteAction.INSTANCE)
                 .setIndex(index).setType(type).setId(id)
                 .execute()
@@ -146,7 +198,7 @@ public class ESService {
         //TODO
         SearchResponse allHits = esClient.prepareSearch(index)
                 .addFields("title", "category")
-                .setQuery(QueryBuilders.matchAllQuery())
+                .setQuery(matchAllQuery())
                 .execute().actionGet();
     }
 

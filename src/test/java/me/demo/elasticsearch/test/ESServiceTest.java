@@ -1,4 +1,4 @@
-/**
+package me.demo.elasticsearch.test; /**
  * Created by Think on 2016/7/25.
  */
 
@@ -36,16 +36,13 @@ import static org.apache.commons.io.FileUtils.readFileToString;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ActiveProfiles({"dev"})
 @Configuration
-public class ESServiceTest { 
+public class ESServiceTest {
     @Value("${elasticsearch.indexName}")
     private String indexName;
 
     @Value("${elasticsearch.typeName}")
     private String typeName;
 
-
-    @Value("${elasticsearch.port}")
-    private String  port;
 
     @Inject
     ESService esService;
@@ -55,13 +52,12 @@ public class ESServiceTest {
     @Before
     public void setup() {
         System.out.println("test begin...");
-//        test_deleteIndex();
+        test_deleteIndex();
     }
 
     @Test
     public void test_getConfig() {
         System.out.println(indexName);
-        System.out.println(port);
     }
 
     @Test
@@ -71,7 +67,16 @@ public class ESServiceTest {
 
     @Test
     public void test_setIndexMapping() {
-        esService.setIndexMapping(indexName,typeName,getMappingJson());
+        esService.setIndexMapping(indexName, typeName, getMappingJson());
+    }
+
+    /**
+     * api插入10万条,7m18s
+     */
+    @Test
+    public void test_createDocument2() {
+        List<Object> array = JSON.parseArray(getEventLogJson());
+        esService.createDocument(indexName, typeName, array);
     }
 
     /**
@@ -112,9 +117,10 @@ public class ESServiceTest {
         esService.deleteDocument("tutorial", "TEST", "AVYgJ7n2_fDrwGO2UeRH");
         esService.deleteDocument("tutorial", "TEST", "AVYgKKzc_fDrwGO2UeRJ");
     }
+
     @Test
     public void test_deleteIndex() {
-        esService.deleteIndex(indexName); 
+        esService.deleteIndex(indexName);
     }
 
 
@@ -152,6 +158,7 @@ public class ESServiceTest {
         }
         return data;
     }
+
     @After
     public void Teardown() {
         System.out.println("test stop...");

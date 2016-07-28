@@ -1,9 +1,12 @@
 package me.demo.elasticsearch.config;
 
+import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.bulk.BackoffPolicy;
+import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.AdminClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
@@ -20,6 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.net.InetAddress;
+import java.util.List;
 
 /**
  * Created by geomart on 2016/7/25.
@@ -69,6 +73,15 @@ public class ESConfiguration {
             public void afterBulk(long l, BulkRequest bulkRequest, BulkResponse bulkResponse) {
                 if (bulkResponse.hasFailures()) {
                     log.info("ES bulk fail,failure message is {}", bulkResponse.buildFailureMessage());
+                    log.info("bulkRequest.getContext()： {}",  bulkRequest.getContext().toString());
+                    for (int i = 0; i < bulkResponse.getItems().length; i++) {
+                        BulkItemResponse item = bulkResponse.getItems()[i];
+                        if (item.isFailed()) {
+                            IndexRequest ireq = (IndexRequest) bulkRequest.requests().get(i);
+                            log.error("Failed while indexing to " + item.getIndex() + " type " + item.getType() + " " +
+                                    "request: [" + ireq + "]: [" + item.getFailureMessage() + "]");
+                        }
+                    }
                 } else {
                     log.info("ES has executed bulk composed of {} actions", bulkRequest.numberOfActions());
                 }
@@ -79,10 +92,10 @@ public class ESConfiguration {
                 log.error("ES bulk error,exception is {}", throwable.getMessage());
             }
         })
-                .setBulkActions(10000)
+                .setBulkActions(1000)
                 .setBulkSize(new ByteSizeValue(100, ByteSizeUnit.MB))
-                .setFlushInterval(TimeValue.timeValueSeconds(1))
-                .setConcurrentRequests(4)
+                .setFlushInterval(TimeValue.timeValueSeconds(5))
+                .setConcurrentRequests(0)
                 .setBackoffPolicy(BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
                 .build();
     }
