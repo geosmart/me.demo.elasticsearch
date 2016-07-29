@@ -2,9 +2,14 @@ package me.demo.elasticsearch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.SimpleCommandLinePropertySource;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -16,6 +21,7 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import me.demo.elasticsearch.config.Constants;
+import me.demo.elasticsearch.service.ESService;
 
 /**
  * Created by geomart on 2016/7/25.
@@ -23,7 +29,9 @@ import me.demo.elasticsearch.config.Constants;
 @SpringBootApplication
 @EnableAutoConfiguration
 @EnableScheduling
-public class Application {
+public class Application implements ApplicationRunner {
+    @Autowired
+    private ApplicationContext context;
 
     private final Logger log = LoggerFactory.getLogger(Application.class);
 
@@ -47,19 +55,37 @@ public class Application {
 
     /**
      * Main method, used to run the application.
-     *
      */
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(Application.class);
         app.setShowBanner(false);
 
         SimpleCommandLinePropertySource source = new SimpleCommandLinePropertySource(args);
-
+//        ApplicationContext app =
         // Check if the selected profile has been set as argument.
         // if not the development profile will be added
         addDefaultProfile(app, source);
 
         app.run(args);
+    }
+
+    @Override
+    public void run(ApplicationArguments applicationArguments) throws Exception {
+        //根据args执行指定操作
+        esServiceHandler(applicationArguments.getSourceArgs());
+    }
+
+    private void esServiceHandler(String args[]) {
+        log.debug("args.length：{}",args.length);
+        ESService esService = context.getBean(ESService.class);
+        if (args.length == 1 && Constants.OPERATION_TYPE.valueOf(args[0]) == Constants.OPERATION_TYPE.REMOVE_DUPLICATE_DOC) {
+            log.debug("args：{}",args[0]);
+            esService.removeDuplicateDoc("event_log_id");
+        } else if (args.length == 2 && Constants.OPERATION_TYPE.valueOf(args[0]) == Constants.OPERATION_TYPE.IMPORT_MONGODB_DATA) {
+            log.debug("args：{},{}",args[0],args[1]);
+            String csvPath = args[1];
+            esService.importDocFromCSV(csvPath);
+        }
     }
 
     /**

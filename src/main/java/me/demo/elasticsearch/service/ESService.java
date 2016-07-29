@@ -32,6 +32,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,6 +68,34 @@ public class ESService {
     @Inject
     @Qualifier("bulkProcessor")
     private BulkProcessor bulkProcessor;
+
+
+    /**
+     * 从CSV导入数据
+     */
+    public void importDocFromCSV(String csvFilePath) {
+        String line = "";
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFilePath))) {
+
+            while ((line = br.readLine()) != null) {
+                createDocument_bulkProcess(indexName, typeName, line);
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 根据Event_LOG_ID相同的数据去重
+     * 获取Event_LOG_ID重复的ID-->删除重复数据
+     */
+    public void removeDuplicateDoc(String field) {
+        List<String> ids = queryDuplicateDoc(indexName, typeName, field);
+        for (String id : ids) {
+            deleteDocument(indexName, typeName, id);
+    }
+    }
 
     /**
      * 查询需去重的Document的ID

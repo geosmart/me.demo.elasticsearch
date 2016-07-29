@@ -6,7 +6,7 @@ spring:
     data:
 
 elasticsearch:
-    host: 193.168.201.85
+    host: 193.168.201.223
     port: 9300
     indexName: cloudx_web_v3
     typeName: T_EVENT_LOG
