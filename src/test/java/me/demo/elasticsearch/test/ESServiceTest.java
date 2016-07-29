@@ -52,7 +52,7 @@ public class ESServiceTest {
     @Before
     public void setup() {
         System.out.println("test begin...");
-        test_deleteIndex();
+//        test_deleteIndex();
     }
 
     @Test
@@ -76,7 +76,9 @@ public class ESServiceTest {
     @Test
     public void test_createDocument2() {
         List<Object> array = JSON.parseArray(getEventLogJson());
-        esService.createDocument(indexName, typeName, array);
+        for (int i = 0; i < 10; i++) {
+            esService.createDocument(indexName, typeName, array);
+        }
     }
 
     /**
@@ -133,7 +135,7 @@ public class ESServiceTest {
      * 测试数据
      */
     private String getEventLogJson() {
-        String path = System.getProperty("user.dir") + "//src//test//resources//data//eventlogs.json";
+        String path = System.getProperty("user.dir") + "//src//test//resources//data//eventlog2.json";
         File file = new File(path);
         String data = null;
         try {

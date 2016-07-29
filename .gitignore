@@ -136,3 +136,4 @@ Desktop.ini
 !.mvn/wrapper/maven-wrapper.jar
 src/main/webapp/bower_components/
 src/main/webapp/.idea/
+src/test/resources/data/eventlog2.json

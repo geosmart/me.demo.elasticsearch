@@ -16,4 +16,10 @@ ElasticSearch V2.3.4 示例项目（批量索引测试），基于Spring Boot框
 * [bulk-api](https://www.elastic.co/guide/en/elasticsearch/client/java-api/2.3/java-docs-bulk.html)
 * [bulk-processor](https://www.elastic.co/guide/en/elasticsearch/client/java-api/2.3/java-docs-bulk-processor.html)
 * [bulk-api-examples](http://www.programcreek.com/java-api-examples/index.php?api=org.elasticsearch.action.bulk.BulkRequestBuilder)
+
+
+##　打包部署
+打包：mvn package -Dmaven.test.skip=true
+运行（Doc去重）：java -jar demo.elasticsearch-1.0.jar REMOVE_DUPLICATE_DOC
+运行（导入CSV）：java -jar demo.elasticsearch-1.0.jar IMPORT_MONGODB_DATA   D:\cygwin\home\es-data.csv
  

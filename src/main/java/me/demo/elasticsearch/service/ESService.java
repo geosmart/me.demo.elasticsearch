@@ -76,10 +76,8 @@ public class ESService {
     public void importDocFromCSV(String csvFilePath) {
         String line = "";
         try (BufferedReader br = new BufferedReader(new FileReader(csvFilePath))) {
-
             while ((line = br.readLine()) != null) {
                 createDocument_bulkProcess(indexName, typeName, line);
-
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -92,9 +90,10 @@ public class ESService {
      */
     public void removeDuplicateDoc(String field) {
         List<String> ids = queryDuplicateDoc(indexName, typeName, field);
+        log.info("duplicate doc count:{}",ids.size());
         for (String id : ids) {
             deleteDocument(indexName, typeName, id);
-    }
+        }
     }
 
     /**
@@ -125,9 +124,9 @@ public class ESService {
                 }
             }
         }
+
         return docIds;
     }
-
 
     /**
      * 新建Index（database）
@@ -206,10 +205,7 @@ public class ESService {
      */
     public void deleteDocument(String index, String type, String id) {
         log.debug("delete doc ：{}", id);
-        DeleteResponse rsp = new DeleteRequestBuilder(esClient, DeleteAction.INSTANCE)
-                .setIndex(index).setType(type).setId(id)
-                .execute()
-                .actionGet();
+        esClient.prepareDelete(index, type, id).execute().actionGet();
     }
 
 

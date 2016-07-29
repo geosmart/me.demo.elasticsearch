@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -71,18 +72,22 @@ public class Application implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments applicationArguments) throws Exception {
-        //根据args执行指定操作
-        esServiceHandler(applicationArguments.getSourceArgs());
+        if (applicationArguments.getSourceArgs().length > 0) {
+            //根据args执行指定操作
+            esServiceHandler(applicationArguments.getSourceArgs());
+            //退出程序
+            SpringApplication.exit(context, (ExitCodeGenerator) () -> 2);
+        }
     }
 
     private void esServiceHandler(String args[]) {
-        log.debug("args.length：{}",args.length);
+        log.debug("args.length：{}", args.length);
         ESService esService = context.getBean(ESService.class);
         if (args.length == 1 && Constants.OPERATION_TYPE.valueOf(args[0]) == Constants.OPERATION_TYPE.REMOVE_DUPLICATE_DOC) {
-            log.debug("args：{}",args[0]);
+            log.debug("args：{}", args[0]);
             esService.removeDuplicateDoc("event_log_id");
         } else if (args.length == 2 && Constants.OPERATION_TYPE.valueOf(args[0]) == Constants.OPERATION_TYPE.IMPORT_MONGODB_DATA) {
-            log.debug("args：{},{}",args[0],args[1]);
+            log.debug("args：{},{}", args[0], args[1]);
             String csvPath = args[1];
             esService.importDocFromCSV(csvPath);
         }

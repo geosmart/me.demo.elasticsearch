@@ -55,7 +55,7 @@ public class ESDuplicateDocTest {
      */
     @Test
     public void removeDuplicateDoc() {
-        esService.removeDuplicateDoc("event_log_id");
+//        esService.removeDuplicateDoc("event_log_id");
     }
 
     /**
